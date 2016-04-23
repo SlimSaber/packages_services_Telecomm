@@ -17,14 +17,12 @@
 package com.android.server.telecom;
 
 import android.content.Context;
-import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.SystemProperties;
 import android.os.Trace;
-import android.os.UserHandle;
 import android.provider.CallLog.Calls;
 import android.provider.Settings;
 import android.telecom.CallAudioState;
@@ -46,7 +44,6 @@ import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.telephony.PhoneConstants;
 import com.android.internal.telephony.TelephonyProperties;
 import com.android.internal.util.IndentingPrintWriter;
-import com.android.server.telecom.components.ErrorDialogActivity;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -1347,7 +1344,6 @@ public class CallsManager extends Call.ListenerBase implements VideoProviderProx
             // TODO: Define expected state transitions here, and log when an
             // unexpected transition occurs.
             call.setState(newState, tag);
-            maybeShowErrorDialogOnDisconnect(call);
 
             Trace.beginSection("onCallStateChanged");
             // Only broadcast state change for calls that are being tracked.
@@ -1454,7 +1450,6 @@ public class CallsManager extends Call.ListenerBase implements VideoProviderProx
      */
     private boolean isPotentialInCallMMICode(Uri handle) {
         if (handle != null && handle.getSchemeSpecificPart() != null &&
-                handle.getScheme() != null &&
                 handle.getScheme().equals(PhoneAccount.SCHEME_TEL)) {
 
             String dialedNumber = handle.getSchemeSpecificPart();
@@ -1695,26 +1690,6 @@ public class CallsManager extends Call.ListenerBase implements VideoProviderProx
             pw.increaseIndent();
             mConnectionServiceRepository.dump(pw);
             pw.decreaseIndent();
-        }
-    }
-
-    /**
-    * For some disconnected causes, we show a dialog when it's a mmi code or potential mmi code.
-    *
-    * @param call The call.
-    */
-    private void maybeShowErrorDialogOnDisconnect(Call call) {
-        if (call.getState() == CallState.DISCONNECTED && (isPotentialMMICode(call.getHandle())
-                || isPotentialInCallMMICode(call.getHandle()))) {
-            DisconnectCause disconnectCause = call.getDisconnectCause();
-            if (!TextUtils.isEmpty(disconnectCause.getDescription()) && (disconnectCause.getCode()
-                    == DisconnectCause.ERROR)) {
-                Intent errorIntent = new Intent(mContext, ErrorDialogActivity.class);
-                errorIntent.putExtra(ErrorDialogActivity.ERROR_MESSAGE_STRING_EXTRA,
-                        disconnectCause.getDescription());
-                errorIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                mContext.startActivityAsUser(errorIntent, UserHandle.CURRENT);
-            }
         }
     }
 }
